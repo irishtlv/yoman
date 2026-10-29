@@ -373,7 +373,24 @@
     };
     inp.click();
   });
+  /* write the day's summary into that day's "🌙 ערב" event in Google, so it lives in the calendar too */
+  var sumTimers={};
+  function pushSummary(k){
+    clearTimeout(sumTimers[k]);
+    sumTimers[k]=setTimeout(function(){
+      if(!mcp||!state.events||!mine.blocks)return;
+      var ev=onDayAll(k).filter(function(e){return /^🌙 ערב$/.test(e.title);})[0];if(!ev)return;
+      var sc=dayScore(k);if(!sc||!sc.t)return;
+      var done=sc.per.filter(function(p){return p.ok;}).map(function(p){return p.it.text;});
+      var miss=sc.per.filter(function(p){return !p.ok;}).map(function(p){return p.it.text;});
+      var base=String(ev.desc||"").split("\n\n📊")[0].replace(/\s+$/,"");
+      var txt=base+"\n\n📊 סיכום היום: "+sc.d+" מתוך "+sc.t+" ("+sc.pct+"%)\n✓ בוצע: "+(done.join(", ")||"—")+"\n✗ לא בוצע: "+(miss.join(", ")||"—");
+      if(txt===ev.desc)return;
+      mcp.callTool(SERVER,"update_event",{eventId:ev.id,description:txt,notificationLevel:"NONE"}).then(function(){ev.desc=txt;},function(){});
+    },8000);
+  }
   function saveMine(k){
+    pushSummary(k);
     try{localStorage.setItem("yoman-mine",JSON.stringify(mine.checks));}catch(e){}
     if(!mine.db)return;
     clearTimeout(mine.timers[k]);
